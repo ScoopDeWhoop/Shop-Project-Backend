@@ -17,6 +17,7 @@ from .models import Customer
 from django.contrib.auth.models import User
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
+from rest_framework.decorators import action
 Customer = get_user_model()
     
 @api_view(['GET', 'POST'])
@@ -92,11 +93,13 @@ User = get_user_model()
 @api_view(['POST'])
 @require_POST
 def login_view(request):
+
+   
     username = request.data.get('username')
     password = request.data.get('password')
-
+    print(username,password)
     user = authenticate(username=username, password=password)
-
+    print(user)
     if user:
         refresh = RefreshToken.for_user(user)
         access_token = str(refresh.access_token)
@@ -157,14 +160,20 @@ class CartItemViewSet(viewsets.ModelViewSet):
     serializer_class = CartItemSerializer
 
     # Custom method to get cart items for a specific cart
+    
     def get_cart_items(self, request, cart_id):
         cart_items = CartItem.objects.filter(cart__id=cart_id)
         serializer = self.serializer_class(cart_items, many=True)
         return Response(serializer.data)
-
+    
     # Override the create method to associate the new cart item with the corresponding cart
     def create(self, request, *args, **kwargs):
         cart_id = request.data.get('cart')
         cart = Cart.objects.get(id=cart_id)
         request.data['cart'] = cart.id
         return super().create(request, *args, **kwargs)
+    @action(detail=True, methods=['delete'])
+    def delete_all_items(self, request, pk=None):
+        cart_items = CartItem.objects.filter(cart__id=pk)
+        cart_items.delete()
+        return Response(status=204)
